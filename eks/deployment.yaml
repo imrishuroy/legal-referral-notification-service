@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: legal-referral-notification-deployment
+  labels:
+    app: legal-referral-notification
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: legal-referral-notification
+  template:
+    metadata:
+      labels:
+        app: legal-referral-notification
+    spec:
+      containers:
+        - name: legal-referral-api
+          image: 021891590100.dkr.ecr.us-east-1.amazonaws.com/legalreferral-notification:{{IMAGE_TAG}}
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+              name: http-server
