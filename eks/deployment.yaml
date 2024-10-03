@@ -15,7 +15,7 @@ spec:
         app: legal-referral-notification
     spec:
       containers:
-        - name: legal-referral-api
+        - name: legal-referral-notification
           image: 021891590100.dkr.ecr.us-east-1.amazonaws.com/legalreferral-notification:{{IMAGE_TAG}}
           imagePullPolicy: Always
           ports:
