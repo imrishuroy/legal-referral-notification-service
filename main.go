@@ -2,49 +2,83 @@ package main
 
 import (
 	"context"
-	firebase "firebase.google.com/go"
-	"firebase.google.com/go/messaging"
+	"errors"
 	"fmt"
-	"google.golang.org/api/option"
-	"log"
+	"github.com/imrishuroy/legal-referral-notification-service/api"
+	db "github.com/imrishuroy/legal-referral-notification-service/db/sqlc"
+	"github.com/imrishuroy/legal-referral-notification-service/util"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/rs/zerolog/log"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 )
 
 func main() {
 
-	opt := option.WithCredentialsFile("./service-account-key.json")
-	app, err := firebase.NewApp(context.Background(), nil, opt)
+	log.Info().Msg("Welcome to LegalReferral Notification Service")
+
+	config, err := util.LoadConfig(".")
 	if err != nil {
-		//log.Fatal().Msg("Failed to create Firebase app")
-	}
-	// Obtain a messaging.Client from the App.
-	ctx := context.Background()
-	client, err := app.Messaging(ctx)
-	if err != nil {
-		log.Fatalf("error getting Messaging client: %v\n", err)
+		log.Error().Err(err).Msg("cannot load config")
 	}
 
-	// This registration token comes from the client FCM SDKs.
-	registrationToken := "DEVICE_REGISTRATION_TOKEN"
+	// db connection
+	connPool, err := pgxpool.New(context.Background(), config.DBSource)
 
-	// See documentation on defining a message payload.
-	message := &messaging.Message{
-		Data: map[string]string{
-			"score": "850",
-			"time":  "19:26",
-		},
-		Notification: &messaging.Notification{
-			Title: "Congratulations!!",
-			Body:  "You have just implement push notification",
-		},
-		Token: registrationToken,
-	}
-
-	// Send a message to the device corresponding to the provided
-	// registration token.
-	response, err := client.Send(ctx, message)
 	if err != nil {
-		log.Fatalln(err)
+		fmt.Println("cannot connect to db:", err)
 	}
-	// Response is a message ID string.
-	fmt.Println("Successfully sent message:", response)
+	defer connPool.Close() // close db connection
+
+	store := db.NewStore(connPool)
+
+	server, err := api.NewServer(config, store)
+	if err != nil {
+		log.Error().Err(err).Msg("cannot create server")
+	}
+
+	go func() {
+		err := api.ConnectConsumer(server)
+		if err != nil {
+			log.Error().Err(err).Msg("cannot connect consumer")
+			panic(err)
+		}
+	}()
+
+	srv := &http.Server{
+		Addr:    config.ServerAddress,
+		Handler: nil,
+	}
+
+	go func() {
+		http.HandleFunc("/health", healthCheck)
+		http.HandleFunc("/", healthCheck)
+		fmt.Println("Starting server at " + config.ServerAddress)
+		log.Info().Msg("server address: " + config.ServerAddress)
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Error().Err(err).Msg("cannot start server")
+		}
+	}()
+
+	// Graceful shutdown
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+	log.Info().Msg("Shutting down server...")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := srv.Shutdown(ctx); err != nil {
+		log.Error().Err(err).Msg("Server forced to shutdown")
+	}
+
+	log.Info().Msg("Server exiting")
+
+}
+
+func healthCheck(w http.ResponseWriter, r *http.Request) {
+	_, _ = fmt.Fprint(w, "OK")
 }
