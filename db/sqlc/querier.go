@@ -10,6 +10,7 @@ import (
 
 type Querier interface {
 	GetDeviceTokenByUserId(ctx context.Context, userID string) (string, error)
+	GetUserNameByUserId(ctx context.Context, userID string) (GetUserNameByUserIdRow, error)
 }
 
 var _ Querier = (*Queries)(nil)

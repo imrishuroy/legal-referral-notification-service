@@ -16,6 +16,15 @@ func (server *Server) sendNotification(userID string) error {
 		return err
 	}
 
+	res, err := server.store.GetUserNameByUserId(context.Background(), userID)
+
+	if err != nil {
+		log.Error().Err(err).Msg("error getting user name")
+		return err
+	}
+
+	name := res.FirstName + " " + res.LastName
+
 	// See documentation on defining a message payload.
 	message := &messaging.Message{
 		Data: map[string]string{
@@ -23,8 +32,9 @@ func (server *Server) sendNotification(userID string) error {
 			"time":  "19:26",
 		},
 		Notification: &messaging.Notification{
-			Title: "Congratulations!!",
-			Body:  "You have just implement push notification",
+			//Title: "Like!!",
+			Title: name + " liked your post",
+			//Body: name + " liked your post",
 		},
 		Token: deviceToken,
 	}

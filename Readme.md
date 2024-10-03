@@ -1,4 +1,9 @@
+create a new db migration
+
+    make new_migration name=otp_schema
+
 References
+
 ==========
 https://firebase.google.com/docs/cloud-messaging/send-message
 
