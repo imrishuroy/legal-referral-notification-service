@@ -31,6 +31,7 @@ func NewServer(config util.Config, store db.Store) (*Server, error) {
 	app, err := firebase.NewApp(ctx, nil, opt)
 	if err != nil {
 		log.Error().Err(err).Msg("cannot create firebase app")
+		return nil, err
 	}
 	// Obtain a messaging.Client from the App.
 
@@ -39,6 +40,7 @@ func NewServer(config util.Config, store db.Store) (*Server, error) {
 	client, err := app.Messaging(ctx)
 	if err != nil {
 		log.Error().Err(err).Msg("error getting Messaging client")
+		return nil, err
 	}
 
 	log.Info().Msg("messaging client created")
