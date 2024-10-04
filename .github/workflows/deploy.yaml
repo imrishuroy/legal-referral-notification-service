@@ -2,7 +2,7 @@ name: Deploy to production
 
 on:
   push:
-    branches: [ ft/deployment ]
+    branches: [ main ]
 
 jobs:
 
