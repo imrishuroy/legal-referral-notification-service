@@ -20,6 +20,7 @@ func NewServer(config util.Config, store db.Store) (*Server, error) {
 
 	ctx := context.Background()
 	opt := option.WithCredentialsFile("./service-account-key.json")
+	log.Info().Msg("creating firebase app")
 	app, err := firebase.NewApp(ctx, nil, opt)
 	if err != nil {
 		log.Error().Err(err).Msg("cannot create firebase app")
