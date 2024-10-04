@@ -15,6 +15,7 @@ FROM alpine:3.20
 WORKDIR /app
 COPY --from=builder /app/main .
 COPY app.env .
+COPY service-account-key.json .
 
 # Tells Docker which network port your container listens on
 EXPOSE 8080
