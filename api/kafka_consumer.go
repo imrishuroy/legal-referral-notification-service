@@ -12,9 +12,12 @@ import (
 	"syscall"
 )
 
-type PostData struct {
-	UserID string `json:"user_id"`
-	PostID string `json:"post_id"`
+type Notification struct {
+	UserID           string `json:"user_id" binding:"required"`
+	SenderID         string `json:"sender_id" binding:"required"`
+	TargetID         string `json:"target_id" binding:"required"`
+	TargetType       string `json:"target_type" binding:"required"`
+	NotificationType string `json:"notification_type" binding:"required"`
 }
 
 func ConnectConsumer(server *Server) error {
@@ -47,18 +50,14 @@ func ConnectConsumer(server *Server) error {
 				msgCount++
 				fmt.Printf("Received message Count %d: | Topic(%s) | Message(%s) \n", msgCount, string(msg.Topic), string(msg.Key))
 
-				var data PostData
+				var notification Notification
 
 				// Unmarshal the JSON into the struct
-				err := json.Unmarshal(msg.Value, &data)
+				err := json.Unmarshal(msg.Value, &notification)
 				if err != nil {
 					log.Error().Err(err).Msg("cannot unmarshal data")
 				}
-
-				// Now the data variable contains the deserialized values
-				fmt.Printf("UserID: %s, PostID: %s\n", data.UserID, data.PostID)
-
-				err = server.sendNotification(string(msg.Key))
+				err = server.processNotification(notification)
 				if err != nil {
 					log.Error().Err(err).Msg("cannot post to news feed")
 				}

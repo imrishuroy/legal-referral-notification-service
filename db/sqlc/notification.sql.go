@@ -9,6 +9,52 @@ import (
 	"context"
 )
 
+const createNotification = `-- name: CreateNotification :one
+INSERT INTO notifications (
+    user_id,
+    sender_id,
+    target_id,
+    target_type,
+    notification_type,
+    message
+) VALUES (
+     $1, $2, $3, $4, $5, $6
+) RETURNING notification_id, user_id, sender_id, target_id, target_type, notification_type, message, is_read, created_at
+`
+
+type CreateNotificationParams struct {
+	UserID           string `json:"user_id"`
+	SenderID         string `json:"sender_id"`
+	TargetID         int32  `json:"target_id"`
+	TargetType       string `json:"target_type"`
+	NotificationType string `json:"notification_type"`
+	Message          string `json:"message"`
+}
+
+func (q *Queries) CreateNotification(ctx context.Context, arg CreateNotificationParams) (Notification, error) {
+	row := q.db.QueryRow(ctx, createNotification,
+		arg.UserID,
+		arg.SenderID,
+		arg.TargetID,
+		arg.TargetType,
+		arg.NotificationType,
+		arg.Message,
+	)
+	var i Notification
+	err := row.Scan(
+		&i.NotificationID,
+		&i.UserID,
+		&i.SenderID,
+		&i.TargetID,
+		&i.TargetType,
+		&i.NotificationType,
+		&i.Message,
+		&i.IsRead,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const getDeviceTokenByUserId = `-- name: GetDeviceTokenByUserId :one
 SELECT device_token
 FROM devices

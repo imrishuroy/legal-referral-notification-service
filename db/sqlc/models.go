@@ -15,6 +15,18 @@ type Device struct {
 	LastUsedAt  time.Time `json:"last_used_at"`
 }
 
+type Notification struct {
+	NotificationID   int32     `json:"notification_id"`
+	UserID           string    `json:"user_id"`
+	SenderID         string    `json:"sender_id"`
+	TargetID         int32     `json:"target_id"`
+	TargetType       string    `json:"target_type"`
+	NotificationType string    `json:"notification_type"`
+	Message          string    `json:"message"`
+	IsRead           bool      `json:"is_read"`
+	CreatedAt        time.Time `json:"created_at"`
+}
+
 type User struct {
 	UserID                  string    `json:"user_id"`
 	Email                   string    `json:"email"`

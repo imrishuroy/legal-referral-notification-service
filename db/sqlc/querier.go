@@ -9,6 +9,7 @@ import (
 )
 
 type Querier interface {
+	CreateNotification(ctx context.Context, arg CreateNotificationParams) (Notification, error)
 	GetDeviceTokenByUserId(ctx context.Context, userID string) (string, error)
 	GetUserNameByUserId(ctx context.Context, userID string) (GetUserNameByUserIdRow, error)
 }

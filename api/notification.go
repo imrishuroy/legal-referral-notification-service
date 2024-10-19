@@ -3,20 +3,16 @@ package api
 import (
 	"context"
 	"firebase.google.com/go/messaging"
+	"fmt"
+	db "github.com/imrishuroy/legal-referral-notification-service/db/sqlc"
 	"github.com/rs/zerolog/log"
+	"strconv"
 )
 
-func (server *Server) sendNotification(userID string) error {
+func (server *Server) processNotification(notification Notification) error {
 
-	// Get the device token from the database
-	deviceToken, err := server.store.GetDeviceTokenByUserId(context.Background(), userID)
-
-	if err != nil {
-		log.Error().Err(err).Msg("error getting device token")
-		return err
-	}
-
-	res, err := server.store.GetUserNameByUserId(context.Background(), userID)
+	// getting author details
+	res, err := server.store.GetUserNameByUserId(context.Background(), notification.SenderID)
 
 	if err != nil {
 		log.Error().Err(err).Msg("error getting user name")
@@ -25,16 +21,49 @@ func (server *Server) sendNotification(userID string) error {
 
 	name := res.FirstName + " " + res.LastName
 
+	notificationMsg := notificationMsg(name, notification.TargetType, notification.NotificationType)
+
+	// create notification**
+
+	targetID, err := strconv.Atoi(notification.TargetID)
+
+	notificationReq := createNotificationReq{
+		UserID:           notification.UserID,
+		SenderID:         notification.SenderID,
+		TargetID:         int32(targetID),
+		TargetType:       notification.TargetType,
+		NotificationType: notification.NotificationType,
+		Message:          notificationMsg,
+	}
+
+	err = server.createNotification(notificationReq)
+	if err != nil {
+		log.Error().Err(err).Msg("error creating notification")
+		return err
+	}
+
+	// send notification**
+
+	// Get the recipient's device token
+	deviceToken, err := server.store.GetDeviceTokenByUserId(context.Background(), notification.UserID)
+
+	if err != nil {
+		log.Error().Err(err).Msg("error getting device token")
+		return err
+	}
+
 	// See documentation on defining a message payload.
 	message := &messaging.Message{
 		Data: map[string]string{
-			"score": "850",
-			"time":  "19:26",
+			"click_action":      "FLUTTER_NOTIFICATION_CLICK",
+			"sender_id":         notification.SenderID,
+			"target_id":         fmt.Sprintf("%d", notification.TargetID),
+			"target_type":       notification.TargetType,
+			"notification_type": notification.NotificationType,
 		},
 		Notification: &messaging.Notification{
-			//Title: "Like!!",
-			Title: name + " liked your post",
-			//Body: name + " liked your post",
+			Title: "Legal Referral",
+			Body:  notificationMsg,
 		},
 		Token: deviceToken,
 	}
@@ -49,4 +78,55 @@ func (server *Server) sendNotification(userID string) error {
 	// Response is a message ID string.
 	log.Printf("Successfully sent message: %v\n", response)
 	return nil
+}
+
+type createNotificationReq struct {
+	UserID           string
+	SenderID         string
+	TargetID         int32
+	TargetType       string
+	NotificationType string
+	Message          string
+}
+
+func (server *Server) createNotification(req createNotificationReq) error {
+
+	args := db.CreateNotificationParams{
+		UserID:           req.UserID,
+		SenderID:         req.SenderID,
+		TargetID:         req.TargetID,
+		TargetType:       req.TargetType,
+		NotificationType: req.NotificationType,
+		Message:          req.Message,
+	}
+
+	_, err := server.store.CreateNotification(context.Background(), args)
+	if err != nil {
+		log.Error().Err(err).Msg("error creating notification")
+		return err
+	}
+
+	return nil
+}
+
+func notificationMsg(authorName, targetType, notificationType string) string {
+	var message string
+
+	// Create the notification message based on the type
+	switch notificationType {
+	case "like":
+		message = fmt.Sprintf("%s liked your %s.", authorName, targetType)
+	case "comment":
+		message = fmt.Sprintf("%s commented on your %s.", authorName, targetType)
+	case "share":
+		message = fmt.Sprintf("%s shared your %s.", authorName, targetType)
+	case "follow":
+		message = fmt.Sprintf("%s started following you.", authorName)
+	case "mention":
+		message = fmt.Sprintf("%s mentioned you in a %s.", authorName, targetType)
+	default:
+		message = fmt.Sprintf("%s interacted with your %s.", authorName, targetType)
+	}
+
+	return message
 }
