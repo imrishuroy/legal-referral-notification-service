@@ -66,6 +66,8 @@ jobs:
           kubectl apply -f eks/ingress.yaml
 
       - name: Install Prometheus and Grafana
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh workflow run "Install Prometheus and Grafana"
 
