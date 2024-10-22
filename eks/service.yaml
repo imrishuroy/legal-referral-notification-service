@@ -2,6 +2,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: legal-referral-notification-service
+  namespace: monitoring
 spec:
   selector:
     app: legal-referral-notification

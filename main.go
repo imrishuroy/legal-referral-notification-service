@@ -8,6 +8,8 @@ import (
 	db "github.com/imrishuroy/legal-referral-notification-service/db/sqlc"
 	"github.com/imrishuroy/legal-referral-notification-service/util"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rs/zerolog/log"
 	"net/http"
 	"os"
@@ -15,6 +17,22 @@ import (
 	"syscall"
 	"time"
 )
+
+var (
+	// Create a counter metric
+	requestsTotal = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "http_requests_total",
+			Help: "Total number of HTTP requests",
+		},
+		[]string{"method", "route"},
+	)
+)
+
+func init() {
+	// Register the metric with Prometheus
+	prometheus.MustRegister(requestsTotal)
+}
 
 func main() {
 
@@ -58,6 +76,8 @@ func main() {
 		http.HandleFunc("/", healthCheck)
 		fmt.Println("Starting server at " + config.ServerAddress)
 		log.Info().Msg("server address: " + config.ServerAddress)
+		// Expose the /metrics endpoint for Prometheus to scrape
+		http.Handle("/metrics", promhttp.Handler())
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Error().Err(err).Msg("cannot start server")
 		}
