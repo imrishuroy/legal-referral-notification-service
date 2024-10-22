@@ -66,19 +66,15 @@ jobs:
           kubectl apply -f eks/ingress.yaml
 
       # Install Prometheus and Grafana
-      - name: Install Prometheus and Grafana
+      - name: Install or Upgrade Prometheus and Grafana
         run: |
-          #Create Monitoring Namespace
           kubectl get namespace monitoring || kubectl create namespace monitoring
-          
-          #Add Prometheus Community Helm Repo
+            
           helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
-          
-          #Update Helm Repositories
+            
           helm repo update
-          
-          #Install Prometheus and Grafana
-          helm install prometheus prometheus-community/kube-prometheus-stack --namespace monitoring --create-namespace \
-          --set alertmanager.persistentVolume.storageClass="gp2",server.persistentVolume.storageClass="gp2"
+            
+          helm upgrade --install prometheus prometheus-community/kube-prometheus-stack --namespace monitoring \
+            --set alertmanager.persistentVolume.storageClass="gp2",server.persistentVolume.storageClass="gp2"
 
 
