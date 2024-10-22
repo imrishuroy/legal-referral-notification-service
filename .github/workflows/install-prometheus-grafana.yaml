@@ -1,7 +1,8 @@
 name: Install Prometheus and Grafana
 
 on:
-  workflow_dispatch:  # You can trigger this manually, or you can set it to run on a specific event
+  push:
+    branches: [ main ]
 
 jobs:
   install-prometheus-grafana:
