@@ -64,6 +64,11 @@ jobs:
           kubectl apply -f eks/service.yaml
           kubectl apply -f eks/issuer.yaml
           kubectl apply -f eks/ingress.yaml
-          
-         
-          
+
+      - name: Install Prometheus and Grafana
+        run: |
+        # Call the workflow that installs Prometheus and Grafana
+          gh workflow run "Install Prometheus and Grafana"
+
+
+
