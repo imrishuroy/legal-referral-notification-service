@@ -100,5 +100,7 @@ func main() {
 }
 
 func healthCheck(w http.ResponseWriter, r *http.Request) {
+	// Increment the counter metric
+	requestsTotal.WithLabelValues(r.Method, r.URL.Path).Inc()
 	_, _ = fmt.Fprint(w, "OK")
 }
