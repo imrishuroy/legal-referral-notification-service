@@ -67,7 +67,6 @@ jobs:
 
       - name: Install Prometheus and Grafana
         run: |
-        # Call the workflow that installs Prometheus and Grafana
           gh workflow run "Install Prometheus and Grafana"
 
 
