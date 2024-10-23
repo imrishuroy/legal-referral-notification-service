@@ -74,8 +74,7 @@ jobs:
             
           helm repo update
           
-          helm upgrade --install prometheus prometheus-community/kube-prometheus-stack --namespace monitoring \
-          --values eks/prometheus-config.yaml \
+          helm upgrade --install -f eks/prometheus-config.yaml prometheus prometheus-community/kube-prometheus-stack --namespace monitoring \
           --set alertmanager.persistentVolume.storageClass="gp2",server.persistentVolume.storageClass="gp2"
 
 
