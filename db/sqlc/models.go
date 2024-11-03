@@ -27,6 +27,15 @@ type Notification struct {
 	CreatedAt        time.Time `json:"created_at"`
 }
 
+type PostStatistic struct {
+	PostID    int32     `json:"post_id"`
+	Views     int64     `json:"views"`
+	Likes     int64     `json:"likes"`
+	Comments  int64     `json:"comments"`
+	Shares    int64     `json:"shares"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
 type User struct {
 	UserID                  string    `json:"user_id"`
 	Email                   string    `json:"email"`

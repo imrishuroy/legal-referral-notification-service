@@ -18,6 +18,7 @@ type Notification struct {
 	TargetID         string `json:"target_id" binding:"required"`
 	TargetType       string `json:"target_type" binding:"required"`
 	NotificationType string `json:"notification_type" binding:"required"`
+	AlreadyLiked     string `json:"already_liked"`
 }
 
 func ConnectConsumer(server *Server) error {
@@ -48,7 +49,7 @@ func ConnectConsumer(server *Server) error {
 				log.Error().Err(err).Msg("error")
 			case msg := <-consumer.Messages():
 				msgCount++
-				fmt.Printf("Received message Count %d: | Topic(%s) | Message(%s) \n", msgCount, string(msg.Topic), string(msg.Key))
+				fmt.Printf("Received message Count %d: | Topic(%s) | Message(%s) \n", msgCount, msg.Topic, string(msg.Key))
 
 				var notification Notification
 

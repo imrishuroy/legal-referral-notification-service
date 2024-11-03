@@ -11,8 +11,9 @@ import (
 
 func (server *Server) processNotification(notification Notification) error {
 
+	ctx := context.Background()
 	// getting author details
-	res, err := server.store.GetUserNameByUserId(context.Background(), notification.SenderID)
+	res, err := server.store.GetUserNameByUserId(ctx, notification.SenderID)
 
 	if err != nil {
 		log.Error().Err(err).Msg("error getting user name")
@@ -27,57 +28,89 @@ func (server *Server) processNotification(notification Notification) error {
 
 	targetID, err := strconv.Atoi(notification.TargetID)
 
-	notificationReq := createNotificationReq{
-		UserID:           notification.UserID,
-		SenderID:         notification.SenderID,
-		TargetID:         int32(targetID),
-		TargetType:       notification.TargetType,
-		NotificationType: notification.NotificationType,
-		Message:          notificationMsg,
+	if notification.TargetType == "post" {
+
+		// Parse the string to a boolean
+		alreadyLiked, err := strconv.ParseBool(notification.AlreadyLiked)
+		if err != nil {
+			log.Error().Err(err).Msg("error parsing boolean ")
+		}
+
+		// print is already liked
+		log.Info().Msgf("Already liked: %v", notification.AlreadyLiked)
+		if !alreadyLiked {
+			err = server.store.IncrementLikes(ctx, int32(targetID))
+			if err != nil {
+				log.Error().Err(err).Msg("error incrementing likes")
+				return err
+			}
+		}
+	} else if notification.TargetType == "comment" {
+		err = server.store.IncrementComments(ctx, int32(targetID))
+		if err != nil {
+			log.Error().Err(err).Msg("error incrementing comments")
+			return err
+		}
 	}
 
-	err = server.createNotification(notificationReq)
-	if err != nil {
-		log.Error().Err(err).Msg("error creating notification")
-		return err
-	}
+	if notification.UserID != notification.SenderID {
 
-	// send notification**
+		notificationReq := createNotificationReq{
+			UserID:           notification.UserID,
+			SenderID:         notification.SenderID,
+			TargetID:         int32(targetID),
+			TargetType:       notification.TargetType,
+			NotificationType: notification.NotificationType,
+			Message:          notificationMsg,
+		}
 
-	// Get the recipient's device token
-	deviceToken, err := server.store.GetDeviceTokenByUserId(context.Background(), notification.UserID)
+		err = server.createNotification(notificationReq)
+		if err != nil {
+			log.Error().Err(err).Msg("error creating notification")
+			return err
+		}
 
-	if err != nil {
-		log.Error().Err(err).Msg("error getting device token")
-		return err
-	}
+		// send notification**
 
-	// See documentation on defining a message payload.
-	message := &messaging.Message{
-		Data: map[string]string{
-			"click_action":      "FLUTTER_NOTIFICATION_CLICK",
-			"sender_id":         notification.SenderID,
-			"target_id":         fmt.Sprintf("%d", notification.TargetID),
-			"target_type":       notification.TargetType,
-			"notification_type": notification.NotificationType,
-		},
-		Notification: &messaging.Notification{
-			Title: "Legal Referral",
-			Body:  notificationMsg,
-		},
-		Token: deviceToken,
-	}
+		// Get the recipient's device token
+		deviceToken, err := server.store.GetDeviceTokenByUserId(context.Background(), notification.UserID)
 
-	// Send a message to the device corresponding to the provided
-	// registration token.
-	response, err := server.client.Send(context.Background(), message)
-	if err != nil {
-		log.Error().Err(err).Msg("error sending message")
+		if err != nil {
+			log.Error().Err(err).Msg("error getting device token")
+			return err
+		}
+
+		// See documentation on defining a message payload.
+		message := &messaging.Message{
+			Data: map[string]string{
+				"click_action":      "FLUTTER_NOTIFICATION_CLICK",
+				"sender_id":         notification.SenderID,
+				"target_id":         fmt.Sprintf("%v", notification.TargetID),
+				"target_type":       notification.TargetType,
+				"notification_type": notification.NotificationType,
+			},
+			Notification: &messaging.Notification{
+				Title: "Legal Referral",
+				Body:  notificationMsg,
+			},
+			Token: deviceToken,
+		}
+
+		// Send a message to the device corresponding to the provided
+		// registration token.
+		response, err := server.client.Send(context.Background(), message)
+		if err != nil {
+			log.Error().Err(err).Msg("error sending message")
+			return nil
+		}
+		// Response is a message ID string.
+		log.Printf("Successfully sent message: %v\n", response)
 		return nil
+
 	}
-	// Response is a message ID string.
-	log.Printf("Successfully sent message: %v\n", response)
+
 	return nil
+
 }
 
 type createNotificationReq struct {
